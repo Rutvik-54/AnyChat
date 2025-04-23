@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Chatbot with Claude Integration</title>
+    <style>
+        :root {
+            /* Light theme variables */
+            --bg-color: #f5f5f5;
+            --container-bg: white;
+            --header-bg: #4a6fa5;
+            --header-text: white;
+            --user-msg-bg: #e6f2ff;
+            --bot-msg-bg: #f0f0f0;
+            --input-border: #e0e0e0;
+            --text-color: #333;
+            --button-bg: #4a6fa5;
+            --button-hover: #3a5a80;
+            --button-text: white;
+            --typing-dot-color: #bebebe;
+            --claude-msg-bg: #f2e6ff;
+        }
+        
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --header-bg: #2c3e50;
+            --header-text: #ecf0f1;
+            --user-msg-bg: #2c3e50;
+            --bot-msg-bg: #2d2d2d;
+            --input-border: #444;
+            --text-color: #ecf0f1;
+            --button-bg: #2c3e50;
+            --button-hover: #1a2533;
+            --button-text: #ecf0f1;
+            --typing-dot-color: #6b6b6b;
+            --claude-msg-bg: #3d2952;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .chat-container {
+            width: 350px;
+            height: 500px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--container-bg);
+            transition: all 0.3s ease;
+        }
+        
+        .chat-header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .theme-toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #5b5b5b;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            max-width: 80%;
+            padding: 10px;
+            border-radius: 15px;
+            clear: both;
+            word-wrap: break-word;
+            color: var(--text-color);
+        }
+        
+        .user-message {
+            background-color: var(--user-msg-bg);
+            float: right;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .bot-message {
+            background-color: var(--bot-msg-bg);
+            float: left;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .claude-message {
+            background-color: var(--claude-msg-bg);
+            float: left;
+            border-bottom-left-radius: 5px;
+            border-left: 3px solid #9b59b6;
+        }
+        
+        .message-source {
+            font-size: 0.7em;
+            opacity: 0.7;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid var(--input-border);
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 20px;
+            outline: none;
+            background-color: var(--container-bg);
+            color: var(--text-color);
+        }
+        
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 15px;
+            border: none;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .chat-input button:hover {
+            background-color: var(--button-hover);
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            float: left;
+            clear: both;
+        }
+        
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: var(--typing-dot-color);
+            display: inline-block;
+            border-radius: 50%;
+            animation: typing 1.5s infinite ease-in-out;
+            margin-right: 5px;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0% { transform: translateY(0px); }
+            25% { transform: translateY(-5px); }
+            50% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <span>Chat with Buddy</span>
+            <label class="theme-toggle">
+                <input type="checkbox" id="theme-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Messages will be added here -->
+            <div class="message bot-message">
+                Hello! I'm Buddy, your friendly AI assistant. I'll try to answer your questions, and if I don't know, I'll ask Claude for help! How can I help you today?
+                <div class="message-source">Source: Buddy</div>
+            </div>
+            <div class="typing-indicator" id="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script>
+        class Chatbot {
+            constructor(name = "Buddy") {
+                this.name = name;
+                this.greetingInputs = ["hello", "hi", "hey", "greetings", "sup", "what's up", "howdy"];
+                this.greetingResponses = [
+                    "Hello there!", "Hi!", "Hey!", "Greetings!", 
+                    "Nice to meet you!", "How can I help you today?"
+                ];
+                this.farewellInputs = ["bye", "goodbye", "see you", "cya", "farewell", "exit", "quit"];
+                this.farewellResponses = [
+                    "Goodbye!", "See you later!", "Have a nice day!", 
+                    "Bye! Come back soon!", "Take care!"
+                ];
+                
+                // Simple Q&A database
+                this.qaPairs = {
+                    "what is your name": `My name is ${this.name}.`,
+                    "who are you": `I'm ${this.name}, a simple AI chatbot with Claude integration.`,
+                    "how are you": "I'm doing well, thank you for asking!",
+                    "what can you do": "I can answer basic questions, and if I don't know something, I'll ask Claude for help!",
+                    "what time is it": "I don't have access to real-time data like the current time.",
+                    "tell me a joke": "Why don't scientists trust atoms? Because they make up everything!",
+                    "what is ai": "AI, or Artificial Intelligence, refers to systems designed to perform tasks that typically require human intelligence.",
+                    "what is a chatbot": "A chatbot is a software application that uses AI to conduct online conversations via text or speech.",
+                    "dark mode": "You can toggle dark mode using the switch in the top-right corner of the chat window!",
+                    "light mode": "You can toggle light mode using the switch in the top-right corner of the chat window!",
+                    "who is claude": "Claude is an AI assistant created by Anthropic. I'm connected to Claude to help answer questions I don't know."
+                };
+            }
+            
+            respond(userInput) {
+                // Convert to lowercase for easier matching
+                userInput = userInput.toLowerCase().trim();
+                
+                // Check if input is empty
+                if (!userInput) {
+                    return {
+                        text: "Is there something you'd like to talk about?",
+                        source: "Buddy",
+                        needsClaude: false
+                    };
+                }
+                
+                // Check for greetings
+                if (this.greetingInputs.some(word => userInput.includes(word))) {
+                    return {
+                        text: this.getRandomResponse(this.greetingResponses),
+                        source: "Buddy",
+                        needsClaude: false
+                    };
+                }
+                
+                // Check for farewells
+                if (this.farewellInputs.some(word => userInput.includes(word))) {
+                    return {
+                        text: this.getRandomResponse(this.farewellResponses),
+                        source: "Buddy",
+                        needsClaude: false
+                    };
+                }
+                
+                // Check for known Q&A pairs
+                for (const question in this.qaPairs) {
+                    if (userInput.includes(question)) {
+                        return {
+                            text: this.qaPairs[question],
+                            source: "Buddy",
+                            needsClaude: false
+                        };
+                    }
+                }
+                
+                // Check for theme-related queries
+                if (userInput.includes("dark theme") || userInput.includes("dark mode")) {
+                    return {
+                        text: "You can toggle dark mode using the switch in the top-right corner of the chat window!",
+                        source: "Buddy",
+                        needsClaude: false
+                    };
+                }
+                
+                if (userInput.includes("light theme") || userInput.includes("light mode")) {
+                    return {
+                        text: "You can toggle light mode using the switch in the top-right corner of the chat window!",
+                        source: "Buddy",
+                        needsClaude: false
+                    };
+                }
+                
+                // If we don't have a specific response, we need Claude's help
+                return {
+                    text: "I don't have an answer for that. Let me ask Claude for help...",
+                    source: "Buddy",
+                    needsClaude: true,
+                    query: userInput
+                };
+            }
+            
+            getRandomResponse(responses) {
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+        }
+
+        // Simulated Claude API
+        class ClaudeAPI {
+            constructor() {
+                // Simulated Claude responses for demo purposes
+                this.simulatedResponses = {
+                    "what is the capital of france": "The capital of France is Paris.",
+                    "who invented the telephone": "Alexander Graham Bell is credited with inventing the first practical telephone in 1876, although Antonio Meucci and Elisha Gray also made important contributions to its development.",
+                    "how does photosynthesis work": "Photosynthesis is the process by which green plants, algae, and some bacteria convert sunlight, water, and carbon dioxide into glucose and oxygen. The process takes place in chloroplasts, specifically in the chlorophyll pigments. It consists of light-dependent reactions, which capture energy from sunlight, and the Calvin cycle, which uses that energy to build glucose molecules.",
+                    "what is machine learning": "Machine learning is a subset of artificial intelligence that enables computers to learn from data and improve their performance on specific tasks without being explicitly programmed. It focuses on developing algorithms that can analyze data, recognize patterns, and make decisions or predictions based on that analysis.",
+                    "what is the meaning of life": "The meaning of life is a philosophical question that has been debated throughout human history. Different philosophical, religious, and cultural traditions offer various perspectives. Some suggest it involves happiness, love, knowledge, helping others, or fulfilling one's potential. Others propose that life's meaning is whatever you choose it to be. There isn't a universally agreed-upon answer to this profound question."
+                };
+            }
+            
+            async getResponse(query) {
+                // In a real implementation, this would make an API call to Claude
+                // For demo purposes, we're using simulated responses or generating a generic one
+                
+                // Add artificial delay to simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Check for exact matches in our simulated responses
+                const exactMatch = this.simulatedResponses[query.toLowerCase()];
+                if (exactMatch) {
+                    return exactMatch;
+                }
+                
+                // Check for partial matches
+                for (const key in this.simulatedResponses) {
+                    if (query.toLowerCase().includes(key)) {
+                        return this.simulatedResponses[key];
+                    }
+                }
+                
+                // Generate a generic response based on the query
+                return this.generateGenericResponse(query);
+            }
+            
+            generateGenericResponse(query) {
+                // Extract keywords for a more natural response
+                const keywords = query.toLowerCase().split(' ')
+                    .filter(word => word.length > 3)
+                    .filter(word => !['what', 'where', 'when', 'who', 'why', 'how', 'does', 'is', 'are', 'the', 'and', 'that', 'this', 'with'].includes(word));
+                
+                if (keywords.length > 0) {
+                    return `Based on my knowledge, ${keywords.join(' ')} ${keywords.length > 1 ? 'are' : 'is'} a complex topic with various aspects to consider. If you'd like more specific information, please ask a more detailed question, and I'll do my best to help.`;
+                } else {
+                    return `That's an interesting question. To provide a more helpful answer, could you provide more details or context about what you're looking to learn?`;
+                }
+            }
+        }
+
+        // Initialize the chatbot and Claude API
+        const chatbot = new Chatbot("Buddy");
+        const claudeAPI = new ClaudeAPI();
+        const chatMessages = document.getElementById("chat-messages");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+        const typingIndicator = document.getElementById("typing-indicator");
+        const themeToggle = document.getElementById("theme-toggle");
+
+        // Function to add a message to the chat
+        function addMessage(message, isUser = false, isClaudeResponse = false) {
+            const messageDiv = document.createElement("div");
+            
+            if (isUser) {
+                messageDiv.className = "message user-message";
+            } else if (isClaudeResponse) {
+                messageDiv.className = "message claude-message";
+            } else {
+                messageDiv.className = "message bot-message";
+            }
+            
+            messageDiv.textContent = message.text || message;
+            
+            // Add source if provided
+            if (message.source || isClaudeResponse) {
+                const sourceDiv = document.createElement("div");
+                sourceDiv.className = "message-source";
+                sourceDiv.textContent = `Source: ${message.source || "Claude"}`;
+                messageDiv.appendChild(sourceDiv);
+            }
+            
+            // Insert before typing indicator
+            chatMessages.insertBefore(messageDiv, typingIndicator);
+            
+            // Scroll to the bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to show typing indicator
+        function showTypingIndicator() {
+            typingIndicator.style.display = "block";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to hide typing indicator
+        function hideTypingIndicator() {
+            typingIndicator.style.display = "none";
+        }
+
+        // Function to handle sending a message
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message) {
+                // Add user message to chat
+                addMessage({ text: message }, true);
+                userInput.value = "";
+                
+                // Show typing indicator
+                showTypingIndicator();
+                
+                // Get bot response after short delay
+                setTimeout(async () => {
+                    const response = chatbot.respond(message);
+                    hideTypingIndicator();
+                    addMessage(response);
+                    
+                    if (response.needsClaude) {
+                        // Show typing indicator again for Claude's response
+                        setTimeout(() => {
+                            showTypingIndicator();
+                            
+                            // Get Claude's response
+                            claudeAPI.getResponse(response.query).then(claudeResponse => {
+                                setTimeout(() => {
+                                    hideTypingIndicator();
+                                    addMessage({ text: claudeResponse }, false, true);
+                                }, 500);
+                            });
+                        }, 1000);
+                    }
+                }, Math.floor(Math.random() * 500) + 300);
+            }
+        }
+
+        // Function to toggle between light and dark themes
+        function toggleTheme() {
+            if (themeToggle.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener("click", sendMessage);
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+        themeToggle.addEventListener("change", toggleTheme);
+
+        // Check for saved theme preference or respect OS preference
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'dark' || (savedTheme === null && prefersDark)) {
+            themeToggle.checked = true;
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+
+        // Focus on input when page loads
+        userInput.focus();
+
+        
+    </script>
+</body>
+</html>
