@@ -1,5 +1,2 @@
 # AnyChat
 Chat bot
-wlenfqfnqnffwbvkcnaknckvsklcnna
-scwkvvnkcnndwfnwj2pewkqofnwvf
-dwfnqdqpdvnwoeqmfnvlq
